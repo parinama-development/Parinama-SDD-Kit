@@ -57,5 +57,4 @@ docs/dev
 .github/agents/
 .github/prompts/
 .github/copilot-instructions.md
-.specify/
-specs/
+# .specify/ and specs/ are tracked in Parinama-SDD-Kit for centralized knowledge management
