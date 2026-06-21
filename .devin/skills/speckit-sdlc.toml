@@ -1,0 +1,245 @@
+﻿# speckit-sdlc - Converted from Claude Code format
+# This is a TOML-formatted skill for Devin Desktop
+
+[skill]
+name = "speckit-sdlc"
+description = "Spec-Kit command: SDLC.MD"
+
+[skill.instructions]
+prompt = '''
+---
+description: Master SDLC lifecycle orchestrator â€” detects current feature state and executes the next appropriate speckit skill in sequence.
+---
+
+## User Input
+
+```text
+$ARGUMENTS
+```
+
+You **MUST** consider the user input before proceeding (if not empty).
+
+## Pre-Execution Checks
+
+**Check for extension hooks (before sdlc orchestration)**:
+- Check if `spec-kit/.specify/extensions.yml` exists in the project root.
+- If it exists, read it and look for entries under the `hooks.before_sdlc` key
+- If the YAML cannot be parsed or is invalid, skip hook checking silently and continue normally
+- Filter out hooks where `enabled` is explicitly `false`. Treat hooks without an `enabled` field as enabled by default.
+- For each remaining hook, do **not** attempt to interpret or evaluate hook `condition` expressions:
+  - If the hook has no `condition` field, or it is null/empty, treat the hook as executable
+  - If the hook defines a non-empty `condition`, skip the hook and leave condition evaluation to the HookExecutor implementation
+- For each executable hook, output the following based on its `optional` flag:
+  - **Optional hook** (`optional: true`):
+    ```
+    ## Extension Hooks
+
+    **Optional Pre-Hook**: {extension}
+    Command: `/{command}`
+    Description: {description}
+
+    Prompt: {prompt}
+    To execute: `/{command}`
+    ```
+  - **Mandatory hook** (`optional: false`):
+    ```
+    ## Extension Hooks
+
+    **Automatic Pre-Hook**: {extension}
+    Executing: `/{command}`
+    EXECUTE_COMMAND: {command}
+
+    Wait for the result of the hook command before proceeding to the Outline.
+    ```
+- If no hooks are registered or `spec-kit/.specify/extensions.yml` does not exist, skip silently
+
+## Outline
+
+### 1. Determine Input Type
+
+Parse `$ARGUMENTS` to determine the input type:
+
+- **Feature description** (free text, no existing directory): The user wants to start a new feature from scratch.
+- **Feature directory path** (e.g., `spec-kit/specs/012-knowledge-fabric-enhancement`): The user wants to resume an existing feature.
+- **Feature number** (e.g., `012` or `12`): Resolve to the matching `spec-kit/specs/NNN-*` directory.
+- **Empty input**: Run `spec-kit/.specify/scripts/powershell/check-prerequisites.ps1 -Json` to detect the current active feature directory. If no active feature is found, ask the user for input.
+
+For single quotes in args like "I'm Groot", use escape syntax: e.g 'I'\''m Groot' (or double-quote if possible: "I'm Groot").
+
+### 2. Detect Feature State
+
+Once the feature directory is resolved (FEATURE_DIR), detect the current lifecycle state by checking which artifacts exist:
+
+| State | Condition | Next Action |
+|-------|-----------|-------------|
+| **FRESH** | FEATURE_DIR does not exist OR no `spec.md` in FEATURE_DIR | Run `/speckit-specify` |
+| **SPEC_READY** | `spec.md` exists but no `plan.md` | Run `/speckit-plan` |
+| **PLAN_READY** | `plan.md` exists but no `tasks.md` | Run `/speckit-tasks` |
+| **TASKS_READY** | `tasks.md` exists, not all tasks checked `[X]` | Run `/speckit-implement` |
+| **IMPL_COMPLETE** | All tasks in `tasks.md` checked `[X]` but no `change-summary.md` | Run `/speckit-wrap-up` |
+| **COMPLETE** | `change-summary.md` exists | Report completion |
+
+**State detection logic:**
+
+```
+IF FEATURE_DIR does not exist OR NOT exists(FEATURE_DIR/spec.md):
+    state = FRESH
+ELIF NOT exists(FEATURE_DIR/plan.md):
+    state = SPEC_READY
+ELIF NOT exists(FEATURE_DIR/tasks.md):
+    state = PLAN_READY
+ELIF has_unchecked_tasks(FEATURE_DIR/tasks.md):
+    state = TASKS_READY
+ELIF NOT exists(FEATURE_DIR/change-summary.md):
+    state = IMPL_COMPLETE
+ELSE:
+    state = COMPLETE
+```
+
+**Unchecked tasks check**: Parse `tasks.md` for lines matching `- [ ]` (unchecked). If any exist, tasks are not complete. If all task lines match `- [X]` or `- [x]`, tasks are complete.
+
+### 3. Announce State and Next Action
+
+Display the detected state clearly:
+
+```
+## SDLC State Detection
+
+**Feature:** {feature_name_or_description}
+**Directory:** {FEATURE_DIR}
+**Current State:** {STATE}
+**Artifacts Found:** {list of existing files: spec.md, plan.md, tasks.md, change-summary.md}
+**Next Action:** {description of what will be executed}
+```
+
+### 4. Execute the Appropriate Skill
+
+Based on the detected state, execute the corresponding skill:
+
+#### State: FRESH
+- If user provided a feature description (free text), pass it as input to `/speckit-specify`.
+- If user provided a directory/number that doesn't exist, ask the user for a feature description before proceeding.
+- Execute `/speckit-specify` with the feature description.
+- After completion, **PAUSE** for user checkpoint.
+
+#### State: SPEC_READY
+- Announce: "spec.md is ready. Proceeding to implementation planning."
+- Execute `/speckit-plan`.
+- After completion, **PAUSE** for user checkpoint.
+
+#### State: PLAN_READY
+- Announce: "plan.md is ready. Proceeding to task generation."
+- Execute `/speckit-tasks`.
+- After task generation, automatically proceed to announce TASKS_READY (no pause needed between tasks and implementation announcement).
+
+#### State: TASKS_READY
+- Announce: "tasks.md is ready with unchecked tasks. Proceeding to implementation."
+- Display task completion progress: `{completed}/{total} tasks completed`.
+- Execute `/speckit-implement`.
+- After completion, **PAUSE** for user checkpoint.
+
+#### State: IMPL_COMPLETE
+- Announce: "All tasks are complete. Proceeding to wrap-up."
+- Execute `/speckit-wrap-up`.
+- After completion, report final status.
+
+#### State: COMPLETE
+- Display completion summary:
+  ```
+  ## Feature Complete
+
+  **Feature:** {feature_name}
+  **Directory:** {FEATURE_DIR}
+  **Status:** COMPLETE
+
+  All lifecycle stages have been completed:
+  - [X] Specification (spec.md)
+  - [X] Planning (plan.md)
+  - [X] Task generation (tasks.md)
+  - [X] Implementation (all tasks checked)
+  - [X] Wrap-up (change-summary.md)
+
+  **Recommended next actions:**
+  - Run `/speckit-update-knowledge` to integrate this feature into the knowledge base
+  - Run `/speckit-audit-knowledge` to check for knowledge drift
+  ```
+
+### 5. User Checkpoints
+
+At each checkpoint pause, display:
+
+```
+## Checkpoint: {stage_name}
+
+**Completed:** {what was just completed}
+**Next stage:** {what comes next}
+
+Would you like to:
+1. **Continue** to the next stage
+2. **Review** the generated artifact before continuing
+3. **Stop** here and resume later
+
+Please respond with your choice.
+```
+
+**Checkpoint locations:**
+- **Post-Spec**: After `/speckit-specify` completes (spec.md generated)
+- **Post-Plan**: After `/speckit-plan` completes (plan.md generated)
+- **Post-Implement**: After `/speckit-implement` completes (all tasks checked)
+
+If the user chooses to continue, detect the new state (re-run step 2) and proceed to step 4 with the next skill. This ensures the orchestrator always re-validates state rather than assuming the previous skill succeeded.
+
+### 6. Error Handling
+
+- **Missing prerequisites**: If a required script (`check-prerequisites.ps1`) is not found, report the error and suggest verifying the spec-kit installation.
+- **Ambiguous feature number**: If multiple directories match the provided number, list them and ask the user to clarify.
+- **Skill execution failure**: If any skill fails mid-execution, report the failure, display the current state, and suggest the user resolve the issue before re-running `/speckit-sdlc`.
+- **Invalid state transition**: If the detected state does not match expectations (e.g., tasks.md exists but plan.md does not), report the inconsistency and suggest manual review.
+
+### 7. Check for Extension Hooks
+
+After orchestration completes or pauses, check if `spec-kit/.specify/extensions.yml` exists in the project root.
+- If it exists, read it and look for entries under the `hooks.after_sdlc` key
+- If the YAML cannot be parsed or is invalid, skip hook checking silently and continue normally
+- Filter out hooks where `enabled` is explicitly `false`. Treat hooks without an `enabled` field as enabled by default.
+- For each remaining hook, do **not** attempt to interpret or evaluate hook `condition` expressions:
+  - If the hook has no `condition` field, or it is null/empty, treat the hook as executable
+  - If the hook defines a non-empty `condition`, skip the hook and leave condition evaluation to the HookExecutor implementation
+- For each executable hook, output the following based on its `optional` flag:
+  - **Optional hook** (`optional: true`):
+    ```
+    ## Extension Hooks
+
+    **Optional Hook**: {extension}
+    Command: `/{command}`
+    Description: {description}
+
+    Prompt: {prompt}
+    To execute: `/{command}`
+    ```
+  - **Mandatory hook** (`optional: false`):
+    ```
+    ## Extension Hooks
+
+    **Automatic Hook**: {extension}
+    Executing: `/{command}`
+    EXECUTE_COMMAND: {command}
+    ```
+- If no hooks are registered or `spec-kit/.specify/extensions.yml` does not exist, skip silently
+
+## Operating Principles
+
+### Orchestration Guidelines
+
+- **State is truth**: Always detect state from the filesystem, never assume state based on previous actions.
+- **One skill at a time**: Execute exactly one skill per cycle, then re-detect state.
+- **User control**: Always pause at checkpoints â€” never auto-advance through the entire lifecycle without user confirmation.
+- **Idempotent detection**: Re-running `/speckit-sdlc` on the same feature at the same state must produce the same detection and recommendation.
+- **No file modification**: This orchestrator does not modify files directly â€” it delegates all file operations to the individual skills.
+- **Constitution compliance**: All delegated skills are expected to comply with `speckit.constitution`. The orchestrator does not duplicate constitution checks.
+
+## Context
+
+$ARGUMENTS
+
+'''

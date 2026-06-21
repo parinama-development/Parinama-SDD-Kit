@@ -1,0 +1,355 @@
+﻿# speckit-specify-guided - Converted from Claude Code format
+# This is a TOML-formatted skill for Devin Desktop
+
+[skill]
+name = "speckit-specify-guided"
+description = "Spec-Kit command: SPECIFY-GUIDED.MD"
+
+[skill.instructions]
+prompt = '''
+---
+description: Session-based guided specification workflow for complex features requiring structured stakeholder collaboration.
+---
+
+## User Input
+
+```text
+$ARGUMENTS
+```
+
+You **MUST** consider the user input before proceeding (if not empty).
+
+## Pre-Execution Checks
+
+**Check for extension hooks (before guided specification)**:
+- Check if `spec-kit/.specify/extensions.yml` exists in the project root.
+- If it exists, read it and look for entries under the `hooks.before_specify_guided` key
+- If the YAML cannot be parsed or is invalid, skip hook checking silently and continue normally
+- Filter out hooks where `enabled` is explicitly `false`. Treat hooks without an `enabled` field as enabled by default.
+- For each remaining hook, do **not** attempt to interpret or evaluate hook `condition` expressions:
+  - If the hook has no `condition` field, or it is null/empty, treat the hook as executable
+  - If the hook defines a non-empty `condition`, skip the hook and leave condition evaluation to the HookExecutor implementation
+- For each executable hook, output the following based on its `optional` flag:
+  - **Optional hook** (`optional: true`):
+    ```
+    ## Extension Hooks
+
+    **Optional Pre-Hook**: {extension}
+    Command: `/{command}`
+    Description: {description}
+
+    To execute: `/{command}`
+    ```
+  - **Mandatory hook** (`optional: false`):
+    ```
+    ## Extension Hooks
+
+    **Automatic Pre-Hook**: {extension}
+    Executing: `/{command}`
+    EXECUTE_COMMAND: {command}
+
+    Wait for the result of the hook command before proceeding to the Outline.
+    ```
+- If no hooks are registered or `spec-kit/.specify/extensions.yml` does not exist, skip silently
+
+## Outline
+
+The text the user typed after `/speckit.specify-guided` in the triggering message **is** the feature description. Assume you always have it available in this conversation even if `$ARGUMENTS` appears literally below. Do not ask the user to repeat it unless they provided an empty command.
+
+Given that feature description, execute the following guided 3-session workflow:
+
+### 1. Initialize Session State
+
+1. **Resolve the feature directory** using the same logic as `/speckit.specify`:
+   - Check `spec-kit/.specify/feature.json` for an existing `feature_directory` value
+   - If found, use it as `FEATURE_DIR`
+   - If not found, auto-generate:
+     - Generate a concise short name (2-4 words) from the feature description
+     - Check `spec-kit/.specify/init-options.json` for `branch_numbering`
+     - If `"timestamp"`: prefix is `YYYYMMDD-HHMMSS` (current timestamp)
+     - If `"sequential"` or absent: prefix is `NNN` (next available 3-digit number after scanning existing directories in `specs/`)
+     - Construct the directory name: `<prefix>-<short-name>` (e.g., `003-user-auth`)
+     - Set `FEATURE_DIR` to `specs/<directory-name>`
+   - Create the directory: `mkdir -p FEATURE_DIR`
+
+2. **Create or read session state** at `FEATURE_DIR/.session-state.yaml`:
+   - If the file does not exist, create it with this structure:
+
+     ```yaml
+     feature: "{feature_description}"
+     created: "YYYY-MM-DD"
+     sessions:
+       business_foundation:
+         status: pending    # pending | in_progress | completed
+         completed_at: null
+         findings: {}
+       technical_discovery:
+         status: pending
+         completed_at: null
+         findings: {}
+       spec_assembly:
+         status: pending
+         completed_at: null
+         findings: {}
+     current_session: 1
+     ```
+
+   - If the file already exists and has completed sessions: follow the **Session Resume Logic** in step 5 below before proceeding.
+
+3. **Display session progress table**:
+
+   ```
+   | Session | Name                 | Status      | Completed  |
+   |---------|----------------------|-------------|------------|
+   | 1       | Business Foundation  | COMPLETED   | 2026-06-04 |
+   | 2       | Technical Discovery  | IN PROGRESS | --         |
+   | 3       | Spec Assembly        | PENDING     | --         |
+   ```
+
+   Reflect the actual status from `.session-state.yaml` in the table.
+
+### 2. Session 1: Business Foundation
+
+**Goal:** Establish scope, value proposition, and constraints.
+
+Guide the user through these questions **sequentially** (one at a time, wait for the answer before asking the next):
+
+1. **Problem & Users**
+   - Ask: "What problem does this feature solve? Who experiences this problem?"
+   - Capture: problem statement, affected users/personas
+
+2. **Success Metrics**
+   - Ask: "What does success look like? What measurable outcomes indicate the feature is working?"
+   - Capture: success metrics, KPIs, acceptance indicators
+
+3. **Scope Boundaries**
+   - Ask: "What is explicitly OUT of scope for this feature?"
+   - Capture: scope boundaries, excluded items, deferred capabilities
+
+4. **Constraints**
+   - Ask: "Are there budget, timeline, regulatory, or technical constraints?"
+   - Capture: constraints list (budget, time, compliance, technology limitations)
+
+5. **Integration Points**
+   - Ask: "Are there existing features, systems, or workflows this feature must integrate with?"
+   - Capture: dependencies, integration points, upstream/downstream systems
+
+After all 5 questions have been answered:
+- Summarize the collected findings back to the user in a structured format
+- Ask: "Does this business foundation accurately capture the feature scope? (yes/no/edit)"
+- If user responds **"edit"**: allow user to correct specific items by asking which item to change, then re-present the updated summary
+- If user responds **"no"**: ask which aspects need revision, then re-collect those specific answers
+- If user responds **"yes"**: update `.session-state.yaml`:
+  - Set `sessions.business_foundation.status` to `completed`
+  - Set `sessions.business_foundation.completed_at` to current date
+  - Store all captured findings under `sessions.business_foundation.findings` as structured data:
+    ```yaml
+    findings:
+      problem_statement: "..."
+      affected_users:
+        - "..."
+      success_metrics:
+        - "..."
+      out_of_scope:
+        - "..."
+      constraints:
+        - "..."
+      integration_points:
+        - "..."
+    ```
+  - Set `current_session` to `2`
+  - Display updated progress table
+
+### 3. Session 2: Technical Discovery
+
+**Goal:** Identify impacted areas, dependencies, and risks.
+
+The AI performs analysis first, then presents findings for user validation:
+
+1. **Automated analysis** (no user input needed):
+   - Read `spec-kit/ai/knowledge/dependency-graph.yaml` to identify modules impacted by the session 1 scope
+   - Read relevant knowledge documents based on session 1 problem statement and integration points
+   - Read `spec-kit/LEARNINGS.md` for applicable patterns, pitfalls, and established conventions
+   - Identify technical risks from the knowledge base (security, performance, data integrity, etc.)
+   - If any of these files do not exist, note their absence and proceed with available information
+
+2. **Present findings to user for validation** (one at a time, wait for response):
+
+   a. **Impacted Modules**
+      - Present: "Based on the scope, these modules will be impacted: [list]. Are there others I'm missing?"
+      - Capture: validated module list, any additions from user
+
+   b. **Applicable Patterns**
+      - Present: "These existing patterns from LEARNINGS.md may apply: [list]. Should we leverage them?"
+      - Capture: confirmed patterns, any patterns to avoid
+
+   c. **Technical Risks**
+      - Present: "I've identified these technical risks: [list]. Are there others you're aware of?"
+      - Capture: validated risk list, any additional risks from user
+
+   d. **Relevant Documentation**
+      - Present: "These knowledge docs are relevant: [list]. Any additional documentation to consider?"
+      - Capture: validated doc list, any additional references
+
+3. **After validation**:
+   - Update `.session-state.yaml`:
+     - Set `sessions.technical_discovery.status` to `completed`
+     - Set `sessions.technical_discovery.completed_at` to current date
+     - Store all validated findings under `sessions.technical_discovery.findings`:
+       ```yaml
+       findings:
+         impacted_modules:
+           - "..."
+         applicable_patterns:
+           - "..."
+         technical_risks:
+           - "..."
+         relevant_docs:
+           - "..."
+       ```
+     - Set `current_session` to `3`
+     - Display updated progress table
+
+### 4. Session 3: Spec Assembly
+
+**Goal:** Compile findings from sessions 1 and 2 into a complete spec.md.
+
+1. **Generate spec.md** from sessions 1 + 2 findings:
+   - Load `spec-kit/.specify/templates/spec-template.md` as the base template
+   - Populate all sections from session findings:
+     - **Overview, Background**: from session 1 problem statement and affected users
+     - **Scope (In/Out)**: from session 1 scope boundaries and out-of-scope items
+     - **User Scenarios**: from session 1 success metrics combined with session 2 module impacts
+     - **Functional Requirements**: derived from session 1 problem statement, success metrics, and session 2 validated patterns
+     - **Non-Functional Requirements**: from session 1 constraints combined with session 2 technical risks
+     - **Impacted Areas**: from session 2 module analysis
+     - **Assumptions**: from session 1 + 2 validated findings and any reasonable defaults applied
+     - **Dependencies**: from session 1 integration points and session 2 relevant docs
+
+2. **Run the self-answering clarification loop** (3 iterations, same approach as `/speckit.specify`):
+   - **Iteration 1**: Check JIRA (if a JIRA issue ID was provided in `$ARGUMENTS`, extract it and query for additional context)
+   - **Iteration 2**: Check knowledge base (`spec-kit/ai/knowledge/`) for answers to any open questions
+   - **Iteration 3**: Check codebase for implementation patterns that inform specification details
+   - **Hard cap**: 5 open questions maximum after all iterations. If more than 5 remain, keep only the 5 most critical (by scope/security/UX impact) and make informed guesses for the rest.
+
+3. **Present draft spec.md to user**:
+   - Output the full spec content in a markdown code block
+   - Ask: "Review the specification above. Approve, or describe changes needed."
+   - If changes requested: make targeted edits to the specific sections mentioned, then re-present the updated spec
+   - If approved: write the final `spec.md` to `FEATURE_DIR/spec.md`
+
+4. **Generate requirements checklist** at `FEATURE_DIR/checklists/requirements.md`:
+   - Use the same checklist format as `/speckit.specify`:
+
+     ```markdown
+     # Specification Quality Checklist: [FEATURE NAME]
+
+     **Purpose**: Validate specification completeness and quality before proceeding to planning
+     **Created**: [DATE]
+     **Feature**: [Link to spec.md]
+
+     ## Content Quality
+
+     - [ ] No implementation details (languages, frameworks, APIs)
+     - [ ] Focused on user value and business needs
+     - [ ] Written for non-technical stakeholders
+     - [ ] All mandatory sections completed
+
+     ## Requirement Completeness
+
+     - [ ] No [NEEDS CLARIFICATION] markers remain
+     - [ ] Requirements are testable and unambiguous
+     - [ ] Success criteria are measurable
+     - [ ] Success criteria are technology-agnostic (no implementation details)
+     - [ ] All acceptance scenarios are defined
+     - [ ] Edge cases are identified
+     - [ ] Scope is clearly bounded
+     - [ ] Dependencies and assumptions identified
+
+     ## Feature Readiness
+
+     - [ ] All functional requirements have clear acceptance criteria
+     - [ ] User scenarios cover primary flows
+     - [ ] Feature meets measurable outcomes defined in Success Criteria
+     - [ ] No implementation details leak into specification
+
+     ## Notes
+
+     - Items marked incomplete require spec updates before `/speckit.clarify` or `/speckit.plan`
+     ```
+
+   - Run the same validation check against each checklist item and mark pass/fail
+
+5. **Update session state**: Update `.session-state.yaml`:
+   - Set `sessions.spec_assembly.status` to `completed`
+   - Set `sessions.spec_assembly.completed_at` to current date
+   - Store assembly metadata under `sessions.spec_assembly.findings`:
+     ```yaml
+     findings:
+       spec_file: "FEATURE_DIR/spec.md"
+       checklist_file: "FEATURE_DIR/checklists/requirements.md"
+       open_questions_remaining: 0
+       clarification_iterations: 3
+     ```
+   - Set `current_session` to `completed`
+
+6. **Persist feature directory** to `spec-kit/.specify/feature.json`:
+   ```json
+   {
+     "feature_directory": "<resolved feature dir>"
+   }
+   ```
+   Write the actual resolved directory path value, not the literal string `FEATURE_DIR`.
+
+### 5. Session Resume Logic
+
+If the skill is invoked and `.session-state.yaml` already exists with one or more completed sessions:
+
+1. Display the progress table showing completed/pending/in-progress sessions
+2. Ask: "Resume from Session {N}: {session_name}? (yes/restart)"
+3. If user responds **"restart"**: clear all session data in `.session-state.yaml`, reset all sessions to `pending`, set `current_session` to `1`, and start from Session 1
+4. If user responds **"yes"**: jump directly to the next incomplete session (skip completed sessions entirely)
+5. When resuming, reload findings from completed sessions in `.session-state.yaml` so they are available for downstream use (e.g., session 3 needs session 1 + 2 findings)
+
+### 6. Post-Execution Hooks
+
+**Check for extension hooks (after guided specification)**:
+- Check if `spec-kit/.specify/extensions.yml` exists in the project root.
+- If it exists, read it and look for entries under the `hooks.after_specify_guided` key
+- If the YAML cannot be parsed or is invalid, skip hook checking silently and continue normally
+- Filter out hooks where `enabled` is explicitly `false`. Treat hooks without an `enabled` field as enabled by default.
+- For each remaining hook, do **not** attempt to interpret or evaluate hook `condition` expressions:
+  - If the hook has no `condition` field, or it is null/empty, treat the hook as executable
+  - If the hook defines a non-empty `condition`, skip the hook and leave condition evaluation to the HookExecutor implementation
+- For each executable hook, output the following based on its `optional` flag:
+  - **Optional hook** (`optional: true`):
+    ```
+    ## Extension Hooks
+
+    **Optional Hook**: {extension}
+    Command: `/{command}`
+    Description: {description}
+
+    To execute: `/{command}`
+    ```
+  - **Mandatory hook** (`optional: false`):
+    ```
+    ## Extension Hooks
+
+    **Automatic Hook**: {extension}
+    Executing: `/{command}`
+    EXECUTE_COMMAND: {command}
+    ```
+- If no hooks are registered or `spec-kit/.specify/extensions.yml` does not exist, skip silently
+
+## Key Rules
+
+- **One question at a time** — never dump all questions at once. Wait for the user's answer before presenting the next question.
+- **Session state persists to disk** so sessions survive process restarts (NFR-06). Each session can be completed in a separate conversation.
+- **The final spec.md must pass the same quality validation** as `/speckit.specify` output (no implementation details, testable requirements, measurable success criteria, technology-agnostic).
+- **JIRA integration**: If the user provides a JIRA issue ID in `$ARGUMENTS`, extract it and use it for JIRA context enrichment during the self-answering clarification loop in Session 3.
+- **Structured data only**: All session findings are stored as structured YAML data in `.session-state.yaml`, not as free text or narrative paragraphs.
+- **Focus on WHAT and WHY** — avoid HOW (no tech stack, APIs, code structure in the spec). Written for business stakeholders, not developers.
+- **Reasonable defaults**: Make informed guesses based on context and industry standards. Only ask for clarification when the choice significantly impacts scope, security, or user experience.
+
+'''

@@ -1,0 +1,250 @@
+﻿# speckit-query - Converted from Claude Code format
+# This is a TOML-formatted command for Gemini CLI
+
+[command]
+name = "query.md"
+description = "Spec-Kit command: QUERY.MD"
+
+[command.prompt]
+content = '''
+---
+description: Read-only knowledge query â€” answers natural-language questions by searching the knowledge base with citations and confidence indicators.
+---
+
+## User Input
+
+```text
+$ARGUMENTS
+```
+
+You **MUST** consider the user input before proceeding (if not empty).
+
+## Pre-Execution Checks
+
+**Check for extension hooks (before knowledge query)**:
+- Check if `spec-kit/.specify/extensions.yml` exists in the project root.
+- If it exists, read it and look for entries under the `hooks.before_query` key
+- If the YAML cannot be parsed or is invalid, skip hook checking silently and continue normally
+- Filter out hooks where `enabled` is explicitly `false`. Treat hooks without an `enabled` field as enabled by default.
+- For each remaining hook, do **not** attempt to interpret or evaluate hook `condition` expressions:
+  - If the hook has no `condition` field, or it is null/empty, treat the hook as executable
+  - If the hook defines a non-empty `condition`, skip the hook and leave condition evaluation to the HookExecutor implementation
+- For each executable hook, output the following based on its `optional` flag:
+  - **Optional hook** (`optional: true`):
+    ```
+    ## Extension Hooks
+
+    **Optional Pre-Hook**: {extension}
+    Command: `/{command}`
+    Description: {description}
+
+    Prompt: {prompt}
+    To execute: `/{command}`
+    ```
+  - **Mandatory hook** (`optional: false`):
+    ```
+    ## Extension Hooks
+
+    **Automatic Pre-Hook**: {extension}
+    Executing: `/{command}`
+    EXECUTE_COMMAND: {command}
+
+    Wait for the result of the hook command before proceeding to the Execution Steps.
+    ```
+- If no hooks are registered or `spec-kit/.specify/extensions.yml` does not exist, skip silently
+
+## Operating Constraints
+
+**STRICTLY READ-ONLY**: Do **not** modify any files. This skill reads the knowledge base and produces an answer. No files are created, edited, or deleted.
+
+## Execution Steps
+
+### 1. Parse the Question
+
+Extract the natural-language question from `$ARGUMENTS`.
+
+If `$ARGUMENTS` is empty, prompt the user:
+
+```
+## Knowledge Query
+
+Please provide a question about the application. Examples:
+- "What authentication mechanism does the API use?"
+- "Which database tables are related to workflow execution?"
+- "What is the role hierarchy for authorization?"
+- "How does the RAG integration work?"
+- "What ports do the local services use?"
+```
+
+**STOP and wait for user input.**
+
+### 2. Determine Relevant Knowledge Sources
+
+Analyze the question keywords and intent to identify which knowledge sources to search:
+
+| Question Domain | Primary Sources | Secondary Sources |
+|----------------|----------------|-------------------|
+| Architecture, system design, patterns | `architecture.md` | `AGENTS.md` |
+| API endpoints, REST, DTOs, HTTP | `api-spec.md` | `architecture.md` |
+| Database, tables, entities, schema, JPA | `data-model-spec.md` | `architecture.md` |
+| Agents, LLM, workflow execution, AI | `agentic-spec.md` | `integration-spec.md` |
+| Frontend, Angular, components, UI | `frontend-spec.md` | `architecture.md` |
+| RabbitMQ, Kafka, Qdrant, Ollama, integration | `integration-spec.md` | `deployment-spec.md` |
+| Security, auth, JWT, roles, permissions | `security-spec.md` | `api-spec.md` |
+| Deployment, ports, infrastructure, setup | `deployment-spec.md` | `AGENTS.md` |
+| Term definitions, glossary, acronyms | `glossary.yaml` | All knowledge docs |
+| Module dependencies, imports | `dependency-graph.yaml` | `architecture.md` |
+| Quality scores, freshness, completeness | `knowledge-scores.yaml` | N/A |
+| Build, test, compile commands | `AGENTS.md` | `deployment-spec.md` |
+| Learnings, gotchas, workarounds | `LEARNINGS.md` | N/A |
+| General / unclear domain | All knowledge docs | `AGENTS.md`, `glossary.yaml` |
+
+**Keyword matching heuristics:**
+- "endpoint", "API", "REST", "controller", "DTO", "request", "response" -> API domain
+- "table", "entity", "column", "relationship", "database", "schema", "JPA" -> Data model domain
+- "agent", "LLM", "workflow", "execution", "decision", "agentic", "LangChain" -> Agentic domain
+- "component", "module", "Angular", "route", "frontend", "UI", "template" -> Frontend domain
+- "security", "auth", "JWT", "role", "permission", "RBAC", "token" -> Security domain
+- "deploy", "port", "infrastructure", "Docker", "setup", "environment" -> Deployment domain
+- "RabbitMQ", "Kafka", "Qdrant", "Ollama", "message", "queue", "vector" -> Integration domain
+- "what is", "define", "meaning of" -> Glossary domain
+- "score", "freshness", "completeness", "quality" -> Knowledge scores domain
+
+### 3. Read Relevant Files
+
+Read the identified primary and secondary knowledge sources:
+
+- Read primary sources fully (these are most likely to contain the answer).
+- Read secondary sources selectively (scan section headings, read only relevant sections).
+- If `glossary.yaml` is a primary source, read it fully.
+- If `knowledge-scores.yaml` is a primary source, read it fully.
+
+**Progressive loading**: If the primary source does not contain a satisfactory answer, escalate to reading additional sources from the general pool until either:
+- A satisfactory answer is found, OR
+- All 8 knowledge docs + supporting files have been searched
+
+### 4. Synthesize the Answer
+
+Produce a focused answer with the following structure:
+
+```markdown
+## Answer
+
+{Direct, concise answer to the question. Lead with the key fact or conclusion.}
+
+### Details
+
+{Expanded explanation with relevant context. Include specific values, configurations, patterns, or code snippets as appropriate.}
+
+### Citations
+
+| Source | Section | Relevance |
+|--------|---------|-----------|
+| `spec-kit/ai/knowledge/{doc}.md` | {Section Heading} | {Why this source is relevant} |
+| `spec-kit/AGENTS.md` | {Section Heading} | {Why this source is relevant} |
+...
+```
+
+#### 4a. Related Glossary Terms
+
+If the answer involves domain-specific terms that have glossary entries, include them:
+
+```markdown
+### Related Terms
+
+| Term | Definition | Source |
+|------|-----------|--------|
+| {term} | {definition from glossary.yaml} | `glossary.yaml` |
+...
+```
+
+If no relevant glossary terms exist, omit this section.
+
+#### 4b. Confidence Indicator
+
+Based on `knowledge-scores.yaml`, provide a confidence indicator:
+
+```markdown
+### Confidence
+
+**Level:** {HIGH / MEDIUM / LOW}
+**Basis:** {explanation}
+```
+
+**Confidence levels:**
+- **HIGH**: Primary source has freshness >= 0.8, completeness >= 0.8, and the answer is directly stated in the document.
+- **MEDIUM**: Primary source has freshness >= 0.5 or completeness >= 0.5, or the answer is inferred from multiple sources.
+- **LOW**: Primary source has low scores, or the answer required significant inference, or the relevant section is marked as stale.
+
+If `knowledge-scores.yaml` does not exist, base confidence on whether the answer comes from a `<!-- steward-authored -->` section (HIGH) or `<!-- ai-synthesized -->` section (MEDIUM) or is inferred (LOW).
+
+### 5. Handle Unanswerable Questions
+
+If the answer cannot be found in any knowledge source:
+
+```markdown
+## Answer Not Found
+
+The knowledge base does not contain sufficient information to answer this question.
+
+### Searched Sources
+| Source | Result |
+|--------|--------|
+| `{doc}` | No relevant content found |
+...
+
+### Recommendation
+
+{Specific suggestion for which knowledge doc should be updated to include this information.}
+
+Suggested action: Run `/speckit-generate-knowledge` to regenerate knowledge docs from the current codebase, or manually add the information to `{suggested_doc}`.
+```
+
+### 6. Check for Extension Hooks
+
+After answering, check if `spec-kit/.specify/extensions.yml` exists in the project root.
+- If it exists, read it and look for entries under the `hooks.after_query` key
+- If the YAML cannot be parsed or is invalid, skip hook checking silently and continue normally
+- Filter out hooks where `enabled` is explicitly `false`. Treat hooks without an `enabled` field as enabled by default.
+- For each remaining hook, do **not** attempt to interpret or evaluate hook `condition` expressions:
+  - If the hook has no `condition` field, or it is null/empty, treat the hook as executable
+  - If the hook defines a non-empty `condition`, skip the hook and leave condition evaluation to the HookExecutor implementation
+- For each executable hook, output the following based on its `optional` flag:
+  - **Optional hook** (`optional: true`):
+    ```
+    ## Extension Hooks
+
+    **Optional Hook**: {extension}
+    Command: `/{command}`
+    Description: {description}
+
+    Prompt: {prompt}
+    To execute: `/{command}`
+    ```
+  - **Mandatory hook** (`optional: false`):
+    ```
+    ## Extension Hooks
+
+    **Automatic Hook**: {extension}
+    Executing: `/{command}`
+    EXECUTE_COMMAND: {command}
+    ```
+- If no hooks are registered or `spec-kit/.specify/extensions.yml` does not exist, skip silently
+
+## Operating Principles
+
+### Query Guidelines
+
+- **Read-only**: This skill never modifies any file. It reads and answers.
+- **Citation-backed answers**: Every claim in the answer must cite a specific file and section. No unsourced statements.
+- **No invented knowledge**: If the knowledge base does not contain the answer, say so. Never fabricate information (Constitution Principle 11).
+- **Confidence transparency**: Always include a confidence indicator so the user knows how reliable the answer is.
+- **Progressive search**: Start narrow (primary source), expand only if needed. This keeps token usage efficient.
+- **Glossary alignment**: Use terms consistently with `glossary.yaml` definitions. If the user uses a non-standard term, translate it to the glossary term and note the mapping.
+- **Actionable gaps**: When an answer cannot be found, recommend a specific action to fill the knowledge gap.
+
+## Context
+
+$ARGUMENTS
+
+'''

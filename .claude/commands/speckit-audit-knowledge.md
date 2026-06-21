@@ -1,0 +1,306 @@
+---
+description: Detect semantic drift between the knowledge base and codebase via stale references, contradictions, terminology drift, completeness gaps, and feature drift.
+---
+
+## User Input
+
+```text
+$ARGUMENTS
+```
+
+You **MUST** consider the user input before proceeding (if not empty).
+
+## Pre-Execution Checks
+
+**Check for extension hooks (before knowledge audit)**:
+- Check if `spec-kit/.specify/extensions.yml` exists in the project root.
+- If it exists, read it and look for entries under the `hooks.before_audit_knowledge` key
+- If the YAML cannot be parsed or is invalid, skip hook checking silently and continue normally
+- Filter out hooks where `enabled` is explicitly `false`. Treat hooks without an `enabled` field as enabled by default.
+- For each remaining hook, do **not** attempt to interpret or evaluate hook `condition` expressions:
+  - If the hook has no `condition` field, or it is null/empty, treat the hook as executable
+  - If the hook defines a non-empty `condition`, skip the hook and leave condition evaluation to the HookExecutor implementation
+- For each executable hook, output the following based on its `optional` flag:
+  - **Optional hook** (`optional: true`):
+    ```
+    ## Extension Hooks
+
+    **Optional Pre-Hook**: {extension}
+    Command: `/{command}`
+    Description: {description}
+
+    Prompt: {prompt}
+    To execute: `/{command}`
+    ```
+  - **Mandatory hook** (`optional: false`):
+    ```
+    ## Extension Hooks
+
+    **Automatic Pre-Hook**: {extension}
+    Executing: `/{command}`
+    EXECUTE_COMMAND: {command}
+
+    Wait for the result of the hook command before proceeding to the Execution Steps.
+    ```
+- If no hooks are registered or `spec-kit/.specify/extensions.yml` does not exist, skip silently
+
+## Operating Constraints
+
+**STRICTLY READ-ONLY**: Do **not** modify any knowledge documents, codebase files, or feature artifacts. The only file this skill writes is the drift report and updated `knowledge-scores.yaml`. All other outputs are displayed to the user.
+
+## Execution Steps
+
+### 1. Load Knowledge Base
+
+Read all 8 knowledge documents from `spec-kit/ai/knowledge/`:
+
+- `architecture.md`
+- `api-spec.md`
+- `data-model-spec.md`
+- `agentic-spec.md`
+- `frontend-spec.md`
+- `integration-spec.md`
+- `security-spec.md`
+- `deployment-spec.md`
+
+Also read the supporting files:
+
+- **REQUIRED**: `spec-kit/ai/knowledge/glossary.yaml` — term definitions
+- **REQUIRED**: `spec-kit/ai/knowledge/knowledge-scores.yaml` — current quality scores (includes last_feature_sync)
+- **IF EXISTS**: `spec-kit/ai/knowledge/dependency-graph.yaml` — module dependencies
+- **IF EXISTS**: `spec-kit/ai/knowledge/.generation-fingerprint.yaml` — generation metadata
+- **SECONDARY**: `spec-kit/KNOWLEDGE.md` — quick reference (mirrors primary docs)
+- **SECONDARY**: `spec-kit/ENGINEERING_STANDARDS.md` — standards and guardrails
+- **SECONDARY**: `spec-kit/.specify/memory/constitution.md` — non-negotiable invariants
+
+### 2. Load Feature Delivery History
+
+Scan `spec-kit/specs/` for all feature directories:
+- Record which features have `change-summary.md` (delivered)
+- Record which have `.knowledge-integrated` (integrated into knowledge base)
+- Record the last integrated feature number for comparison against `knowledge-scores.yaml` `last_feature_sync` values
+
+### 3. Run Detection Passes
+
+For each knowledge document, run 5 detection passes. Limit to 50 total findings across all documents; aggregate remainder in an overflow summary.
+
+#### Pass A: Stale References
+
+For each entity, endpoint, class, table, or component mentioned in a knowledge doc:
+
+1. Search the codebase for the referenced item using grep/find.
+2. Flag any reference that **no longer exists** in the codebase:
+   - Deleted classes or interfaces
+   - Removed endpoints or routes
+   - Dropped database tables or columns
+   - Renamed packages or modules
+
+**Finding format:**
+```
+| {ID} | Stale Reference | {severity} | {doc}:{section} | "{entity}" referenced but not found in codebase | Remove or update reference |
+```
+
+**Severity:**
+- CRITICAL: Core entity (table, controller, service) no longer exists
+- HIGH: Endpoint or route removed
+- MEDIUM: Minor class or utility removed
+- LOW: Comment or example references obsolete name
+
+#### Pass B: Contradictions
+
+Cross-reference claims between knowledge documents:
+
+1. Compare `architecture.md` technology stack claims against `AGENTS.md`.
+2. Compare `api-spec.md` endpoint definitions against actual controllers in codebase.
+3. Compare `data-model-spec.md` table/column definitions against actual entities.
+4. Compare `security-spec.md` role/permission claims against `SecurityConfig` and `@PreAuthorize` annotations.
+5. Compare `frontend-spec.md` component/module claims against actual Angular files.
+6. Check for conflicting version numbers, port numbers, or configuration values across documents.
+
+**Finding format:**
+```
+| {ID} | Contradiction | {severity} | {doc1} vs {doc2} | {doc1} says "{X}" but {doc2} says "{Y}" | Reconcile to match codebase truth |
+```
+
+**Severity:**
+- CRITICAL: Conflicting security rules, authentication mechanisms, or API contracts
+- HIGH: Conflicting architecture patterns, technology versions, or data model definitions
+- MEDIUM: Conflicting configuration values or port numbers
+- LOW: Stylistic or formatting inconsistencies
+
+#### Pass C: Terminology Drift
+
+Check if terms used in knowledge documents match `glossary.yaml` definitions:
+
+1. Extract all domain-specific terms from each knowledge doc.
+2. Compare against `glossary.yaml` entries.
+3. Flag terms used with different meanings or spellings across documents.
+4. Flag terms used in knowledge docs but missing from the glossary.
+5. Flag glossary terms that are no longer used in any knowledge doc.
+
+**Finding format:**
+```
+| {ID} | Terminology Drift | {severity} | {doc(s)} | Term "{X}" used as "{meaning1}" in {doc1} but "{meaning2}" in {doc2} | Standardize per glossary |
+```
+
+**Severity:**
+- HIGH: Business-critical term with conflicting definitions
+- MEDIUM: Technical term used inconsistently
+- LOW: Synonym usage that could cause confusion
+
+#### Pass D: Completeness Gaps
+
+Compare each knowledge document's sections against expected templates:
+
+**Expected sections per document:**
+
+- **architecture.md**: System Overview, Project Structure, Technology Stack, Architectural Patterns, Module Dependencies, Cross-Cutting Concerns
+- **api-spec.md**: Endpoints by Controller, DTOs, Auth Requirements, Versioning, Error Formats
+- **data-model-spec.md**: Tables, Relationships, Constraints, Migration History, Data Access Patterns
+- **agentic-spec.md**: Agent Types, Workflow Lifecycle, LLM Integration, Decision Flow, Approval Checkpoints, RAG
+- **frontend-spec.md**: App Structure, Routing, State Management, API Layer, Design System, Components
+- **integration-spec.md**: External Systems, Message Broker, Vector DB, Inter-Service Comms, Events
+- **security-spec.md**: Authentication, Authorization, Security Config, Endpoint Matrix, Secrets
+- **deployment-spec.md**: Local Setup, Infrastructure, Ports, Environment, Build/Deploy, Startup Scripts
+
+For each document, flag:
+- Missing sections (section heading absent)
+- Empty sections (heading present but no content below it)
+- Placeholder sections (containing TODO, TBD, TKTK, `<placeholder>`, etc.)
+
+**Finding format:**
+```
+| {ID} | Completeness Gap | {severity} | {doc} | Section "{section}" is {missing/empty/placeholder} | Add content based on codebase scan |
+```
+
+**Severity:**
+- CRITICAL: Core section missing entirely (e.g., no endpoint list in api-spec.md)
+- HIGH: Section exists but is empty or placeholder-only
+- MEDIUM: Section exists but is significantly outdated
+- LOW: Optional section missing
+
+#### Pass E: Feature Drift
+
+Check for features delivered after the knowledge doc's last sync:
+
+1. Read `knowledge-scores.yaml` for each doc's `last_feature_sync` value.
+2. Identify all features delivered (have `change-summary.md`) AFTER that feature number.
+3. For each unsynchronized feature, check if it affected files in the domain of the knowledge doc (using the same file-pattern mapping from `/speckit-update-knowledge`).
+
+**Finding format:**
+```
+| {ID} | Feature Drift | {severity} | {doc} | Feature {NNN-slug} delivered but not integrated; affected files: {list} | Run /speckit-update-knowledge |
+```
+
+**Severity:**
+- CRITICAL: 3+ unintegrated features affecting this doc
+- HIGH: 1-2 unintegrated features with significant changes
+- MEDIUM: 1 unintegrated feature with minor changes
+- LOW: Feature delivered but no files in this doc's domain were affected
+
+### 4. Compile Drift Report
+
+Generate a structured drift report. If `$ARGUMENTS` specifies an output path, write to that path. Otherwise, output the report inline.
+
+```markdown
+# Knowledge Base Drift Report
+
+**Generated:** {YYYY-MM-DD}
+**Audited Documents:** 8
+**Total Findings:** {count}
+**Severity Breakdown:** {CRITICAL: N, HIGH: N, MEDIUM: N, LOW: N}
+
+---
+
+## Findings
+
+| ID | Category | Severity | Location(s) | Summary | Recommended Action |
+|----|----------|----------|-------------|---------|-------------------|
+| SR-001 | Stale Reference | CRITICAL | api-spec.md:Endpoints | "AdminResetController" removed from codebase | Remove endpoint documentation |
+| CT-001 | Contradiction | HIGH | architecture.md vs AGENTS.md | RabbitMQ version mismatch (3.x vs 4.3.1) | Update architecture.md |
+| TD-001 | Terminology Drift | MEDIUM | agentic-spec.md, security-spec.md | "approval gate" vs "approval checkpoint" | Standardize to "approval checkpoint" per glossary |
+| CG-001 | Completeness Gap | HIGH | deployment-spec.md:Startup Scripts | Section is empty placeholder | Document start-infra.ps1 procedure |
+| FD-001 | Feature Drift | CRITICAL | data-model-spec.md | Features 009, 010, 011 not integrated | Run /speckit-update-knowledge |
+...
+
+---
+
+## Coverage Summary
+
+| Document | Stale Refs | Contradictions | Term Drift | Completeness | Feature Drift | Overall Health |
+|----------|-----------|----------------|------------|--------------|---------------|----------------|
+| architecture.md | {N} | {N} | {N} | {score}% | {N features behind} | {GOOD/FAIR/POOR} |
+| api-spec.md | {N} | {N} | {N} | {score}% | {N features behind} | {GOOD/FAIR/POOR} |
+...
+
+**Overall health:** {GOOD/FAIR/POOR} — based on critical finding count and average completeness
+
+---
+
+## Recommended Actions (Priority Order)
+
+1. {Highest priority action — e.g., "Run /speckit-update-knowledge to integrate 3 pending features"}
+2. {Next priority — e.g., "Remove stale AdminResetController reference from api-spec.md"}
+3. ...
+```
+
+**Health ratings:**
+- **GOOD**: 0 CRITICAL, <=2 HIGH, completeness >= 80%
+- **FAIR**: 0 CRITICAL, 3+ HIGH OR completeness 50-79%
+- **POOR**: Any CRITICAL finding OR completeness < 50%
+
+### 5. Update knowledge-scores.yaml
+
+Update the quality scores based on audit findings:
+
+- **freshness**: Deduct based on feature drift findings (more drift = lower freshness)
+- **completeness**: Recalculate based on completeness gap findings
+- **confidence**: Deduct based on stale reference and contradiction findings
+
+Do NOT modify `last_feature_sync` or `last_generated` — those are set only by generation/update skills.
+
+### 6. Check for Extension Hooks
+
+After the audit, check if `spec-kit/.specify/extensions.yml` exists in the project root.
+- If it exists, read it and look for entries under the `hooks.after_audit_knowledge` key
+- If the YAML cannot be parsed or is invalid, skip hook checking silently and continue normally
+- Filter out hooks where `enabled` is explicitly `false`. Treat hooks without an `enabled` field as enabled by default.
+- For each remaining hook, do **not** attempt to interpret or evaluate hook `condition` expressions:
+  - If the hook has no `condition` field, or it is null/empty, treat the hook as executable
+  - If the hook defines a non-empty `condition`, skip the hook and leave condition evaluation to the HookExecutor implementation
+- For each executable hook, output the following based on its `optional` flag:
+  - **Optional hook** (`optional: true`):
+    ```
+    ## Extension Hooks
+
+    **Optional Hook**: {extension}
+    Command: `/{command}`
+    Description: {description}
+
+    Prompt: {prompt}
+    To execute: `/{command}`
+    ```
+  - **Mandatory hook** (`optional: false`):
+    ```
+    ## Extension Hooks
+
+    **Automatic Hook**: {extension}
+    Executing: `/{command}`
+    EXECUTE_COMMAND: {command}
+    ```
+- If no hooks are registered or `spec-kit/.specify/extensions.yml` does not exist, skip silently
+
+## Operating Principles
+
+### Audit Guidelines
+
+- **Read-only analysis**: This skill does not modify knowledge documents or feature artifacts. It only writes the drift report and updates scores.
+- **Codebase is ground truth**: When a knowledge doc contradicts the codebase, the codebase wins. Flag the doc, not the code.
+- **Finding limit**: Cap at 50 findings to maintain actionability. Aggregate overflow into a summary count.
+- **Deterministic results**: Rerunning the audit without codebase changes should produce consistent findings.
+- **No invented knowledge**: Report only findings backed by concrete evidence (file existence checks, grep results, version comparisons). Never fabricate drift findings (Constitution Principle 11).
+- **Actionable recommendations**: Every finding must include a specific recommended action (which skill to run, which section to update, which reference to remove).
+
+## Context
+
+$ARGUMENTS

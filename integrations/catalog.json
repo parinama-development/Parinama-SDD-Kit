@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.0",
+  "updated_at": "2026-06-21T00:00:00Z",
+  "catalog_url": "https://raw.githubusercontent.com/parinama-development/Parinama-SDD-Kit/main/integrations/catalog.json",
+  "integrations": {
+    "claude": {
+      "id": "claude",
+      "name": "Claude Code",
+      "version": "1.0.0",
+      "description": "Anthropic Claude Code CLI integration for Parinama SDD",
+      "author": "parinama-development",
+      "repository": "https://github.com/parinama-development/Parinama-SDD-Kit",
+      "tags": ["cli", "anthropic"]
+    },
+    "devin": {
+      "id": "devin",
+      "name": "Devin Desktop",
+      "version": "1.0.0",
+      "description": "Devin Desktop skills-based integration for Parinama SDD",
+      "author": "parinama-development",
+      "repository": "https://github.com/parinama-development/Parinama-SDD-Kit",
+      "tags": ["cli", "skills"]
+    },
+    "gemini": {
+      "id": "gemini",
+      "name": "Gemini CLI",
+      "version": "1.0.0",
+      "description": "Google Gemini CLI integration with TOML command format for Parinama SDD",
+      "author": "parinama-development",
+      "repository": "https://github.com/parinama-development/Parinama-SDD-Kit",
+      "tags": ["cli", "google"]
+    }
+  }
+}
