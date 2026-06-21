@@ -52,14 +52,43 @@ Parinama Driving School is a two-layer application:
 ```
 lib/
   workflow.ts              — Pure functions for flow computation
-  constants.ts             — Business config (prices, contact info)
+  constants.ts             — Business config (prices, contact info, location content)
   lead.ts                  — Lead submission logic
+  reviews.ts               — Google reviews data with photo/outcome fields
+  packages.ts             — Package and add-on data
+  licensing.ts             — Licensing guide data
+  instructors.ts           — Instructor profiles
+components/
+  HeroSection.tsx          — Homepage hero with dual CTAs and rating badge
+  ServiceOverview.tsx      — 3 service cards (Driver Ed, Lessons, Road Test)
+  ProgressCard.tsx         — Progress tracker for guests and logged-in users
+  LicenseRoadmap.tsx       — 5-step visual licensing journey
+  TrustBadges.tsx          — 8 credibility signals
+  Instructors.tsx          — Instructor profiles with avatars
+  PackageTabs.tsx          — Tab-based packages navigation (Lessons, Road Tests, Bundles, Add-ons)
+  LocationPage.tsx         — Shared location page layout with JSON-LD
+  GoogleReviews.tsx        — Success stories carousel with photos/outcomes
+  Contact.tsx              — Contact section with CTA buttons
+  Footer.tsx               — Compact footer with Contact column (phone/email/social)
+  Navbar.tsx               — Simplified navigation (5 main links + Locations dropdown)
+  FAQ.tsx                  — FAQ accordion with 6 core licensing Q&As
+  WhyChoose.tsx            — 5 benefit cards (reduced from 9)
+  Services.tsx             — Services section
 components/workflow/
   WorkflowProvider.tsx     — State + localStorage persistence
-  WorkflowModal.tsx        — Modal shell
-  steps.tsx                — Screen components
+  WorkflowModal.tsx        — Modal shell with autoShow prop (default false)
+  steps.tsx                — Screen components with "Start My Driving Journey" labels
 google-apps-script/
   Code.gs                  — Lead capture Apps Script
+app/
+  page.tsx                 — Homepage with dynamic imports for below-fold components
+  how-it-works/page.tsx     — Licensing guide page with dynamic import
+  packages/page.tsx         — Packages page with dynamic import
+  reviews/page.tsx          — Success stories page with dynamic import
+  locations/austin/page.tsx — Austin location page with JSON-LD
+  locations/san-antonio/page.tsx — San Antonio location page with JSON-LD
+  parallel-parking/page.tsx — Dedicated parallel parking page
+  contact/page.tsx          — Contact page
 ```
 
 ### Member Area (Parinama Framework)
@@ -150,6 +179,64 @@ The Apps Script `/exec` URL is unauthenticated (anyone with URL can POST). This 
 ### OTP Authentication
 
 Email OTP provides UI-level authentication, not real authorization. Suitable for non-sensitive use cases.
+
+## UI/UX Redesign (Spec 016)
+
+### Overview
+Completed comprehensive UI/UX redesign to reposition the site as a guided Texas licensing journey with premium, trust-building, conversion-focused sections.
+
+### Key Changes
+
+**Homepage Hero:**
+- Dual CTAs: "Start My Driving Journey" (opens workflow) and "Book a Road Test" (routes to road-test booking)
+- Guided-journey subheadline referencing Austin & San Antonio
+- Rating badge moved to reviews page header
+
+**New Components:**
+- LicenseRoadmap: 5-step visual licensing journey stepper
+- TrustBadges: 8 credibility signals (TDLR approved, certified instructors, etc.)
+- Instructors: Instructor profiles with avatar/initial fallback
+- PackageTabs: Tab-based navigation (Lessons, Road Tests, Bundles, Add-ons)
+- LocationPage: Shared layout with LocalBusiness JSON-LD for SEO
+
+**Navigation:**
+- Simplified to 5 main links: Home, Services, Packages, How It Works, Account
+- Locations dropdown with Austin & San Antonio
+- Removed redundant links
+
+**Footer:**
+- Compact design with reduced padding
+- New Contact column with phone, email, and social media links
+- Parinama Group logo centered in bottom section
+- Removed redundant Contact link from Company column
+
+**CTA Standardization:**
+- All buttons follow order: Start My Driving Journey, Book a Road Test, Contact Us
+- "Book a Road Test" uses secondary button style (consistent with homepage)
+- Renamed all "Continue My Plan" to "Start My Driving Journey"
+
+**Mobile Optimization:**
+- All interactive elements have min-h-[44px] touch targets
+- Components stack vertically on mobile
+- Mobile menu button increased to h-11 w-11
+
+**Performance:**
+- Dynamic imports for below-fold components (LicenseRoadmap, TrustBadges, Instructors, FAQ)
+- Dynamic imports on all pages (how-it-works, packages, reviews, locations)
+- Loading states for all dynamic components
+
+**New Pages:**
+- /locations/austin - Austin location page with unique metadata and JSON-LD
+- /locations/san-antonio - San Antonio location page with unique metadata and JSON-LD
+- /parallel-parking - Dedicated parallel parking page with technique steps
+- /reviews - Success stories page with rating badge and CTA section
+- /contact - Contact page with CTA buttons
+
+**Content Updates:**
+- WhyChoose reduced from 9 to 5 benefit cards
+- GoogleReviews limited to 3-4 featured reviews
+- FAQ enhanced with 6 core licensing Q&As
+- Parallel Parking detailed content restored to Add-ons tab
 
 ## Environment Configuration
 
