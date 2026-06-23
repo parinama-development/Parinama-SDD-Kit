@@ -1,11 +1,15 @@
 # Tasks — 016 PDS Parinama UI/UX Redesign
 
-**Feature:** PDS Parinama UI/UX Redesign  
-**Spec Number:** 016  
-**Branch:** Tousif  
-**Total Tasks:** 72 base + 23 positioning (T073–T095) = 95  
+**Feature:** PDS Parinama UI/UX Redesign
+**Spec Number:** 016
+**Branch:** Tousif
+**Total Tasks:** 72 base + 23 positioning (T073–T095) + 26 visual polish (T096–T121) = 121
+**Completed:** 45 tasks
+**Pending:** 76 tasks
 
 > **Update (Opus revision):** The original simplification scope (Phases 1–9) is largely implemented. Phase 10 below adds the **"guided licensing journey" positioning & conversion** work (premium hero, roadmap, trust, instructors, success stories, FAQ, location pages, mobile booking). All new work retains the existing **orange brand palette**.
+
+> **Update (Phase 1 Visual Polish - 2026-06-22):** Completed high-impact visual polish and UX improvements inspired by modern SaaS companies (Stripe, Linear, Calendly, Airbnb). This work focused on premium aesthetics, conversion optimization, and trust signals while maintaining the orange brand palette.
 
 ---
 
@@ -22,9 +26,9 @@
 
 **Implementation Tasks:**
 
-- [ ] T001 Create HeroSection component in pds_parinama/components/HeroSection.tsx with headline, subheadline, primary CTA, and rating badge props
+- [X] T001 Create HeroSection component in pds_parinama/components/HeroSection.tsx with headline, subheadline, primary CTA, and rating badge props
 - [ ] T002 [P] Create HeroSection test file in pds_parinama/components/__tests__/HeroSection.test.tsx with tests for rendering headline, subheadline, CTA, and rating badge
-- [ ] T003 Create ServiceOverview component in pds_parinama/components/ServiceOverview.tsx with 3 service cards (Driver Education, Driving Lessons, Road Testing)
+- [X] T003 Create ServiceOverview component in pds_parinama/components/ServiceOverview.tsx with 3 service cards (Driver Education, Driving Lessons, Road Testing)
 - [ ] T004 [P] Create ServiceOverview test file in pds_parinama/components/__tests__/ServiceOverview.test.tsx with tests for rendering 3 service cards with correct icons, titles, and descriptions
 - [ ] T005 Create ProgressCard component in pds_parinama/components/ProgressCard.tsx extracted from JourneyTracker lines 412-514
 - [ ] T006 [P] Create ProgressCard test file in pds_parinama/components/__tests__/ProgressCard.test.tsx with tests for guest progress tracker and logged-in ProgressTracker rendering
@@ -48,16 +52,16 @@
 
 **Implementation Tasks:**
 
-- [ ] T011 Update homepage in pds_parinama/app/page.tsx to remove HighlightStrip import and render
-- [ ] T012 Update homepage in pds_parinama/app/page.tsx to remove PackagesTeaser import and render
-- [ ] T013 Update homepage in pds_parinama/app/page.tsx to replace Services component with ServiceOverview component
+- [X] T011 Update homepage in pds_parinama/app/page.tsx to remove HighlightStrip import and render
+- [X] T012 Update homepage in pds_parinama/app/page.tsx to remove PackagesTeaser import and render
+- [X] T013 Update homepage in pds_parinama/app/page.tsx to replace Services component with ServiceOverview component
 - [ ] T014 [P] Update homepage test file in pds_parinama/app/__tests__/page.test.tsx to test removed sections and new component composition
 - [ ] T015 Update WhyChoose component in pds_parinama/components/WhyChoose.tsx to reduce benefits array from 9 to 5 (keep: Experienced Instructors, Step-by-Step Guidance, Multilingual Instructors, Open 7 Days, TDLR & DPS Approved)
 - [ ] T016 [P] Update WhyChoose test file in pds_parinama/components/__tests__/WhyChoose.test.tsx to test exactly 5 benefit cards render
 - [ ] T017 Update GoogleReviews component in pds_parinama/components/GoogleReviews.tsx to limit GOOGLE_REVIEWS to first 4 reviews
 - [ ] T018 [P] Update GoogleReviews test file in pds_parinama/components/__tests__/GoogleReviews.test.tsx to test exactly 4 reviews render with correct pagination
-- [ ] T019 Delete HighlightStrip component file pds_parinama/components/HighlightStrip.tsx
-- [ ] T020 Delete PackagesTeaser component file pds_parinama/components/PackagesTeaser.tsx
+- [X] T019 Delete HighlightStrip component file pds_parinama/components/HighlightStrip.tsx
+- [X] T020 Delete PackagesTeaser component file pds_parinama/components/PackagesTeaser.tsx
 
 ---
 
@@ -92,7 +96,7 @@
 
 **Implementation Tasks:**
 
-- [ ] T026 Create PackageTabs component in pds_parinama/components/PackageTabs.tsx with tab state management and 4 tabs
+- [X] T026 Create PackageTabs component in pds_parinama/components/PackageTabs.tsx with tab state management and 4 tabs
 - [ ] T027 [P] Create PackageTabs test file in pds_parinama/components/__tests__/PackageTabs.test.tsx with tests for tab rendering and switching
 - [ ] T028 Create LessonsTab component in pds_parinama/components/PackageTabs/LessonsTab.tsx with 3 highlighted packages (single, 6-hour, 10-hour) and "View all packages" link
 - [ ] T029 [P] Create LessonsTab test file in pds_parinama/components/__tests__/LessonsTab.test.tsx with tests for highlighted packages rendering
@@ -102,7 +106,7 @@
 - [ ] T033 [P] Create BundlesTab test file in pds_parinama/components/__tests__/BundlesTab.test.tsx with tests for bundles and WGS accordion
 - [ ] T034 Create AddOnsTab component in pds_parinama/components/PackageTabs/AddOnsTab.tsx with add-ons and simplified distance tier table (3 tiers)
 - [ ] T035 [P] Create AddOnsTab test file in pds_parinama/components/__tests__/AddOnsTab.test.tsx with tests for add-ons and distance tiers
-- [ ] T036 Update packages page in pds_parinama/app/packages/page.tsx to use PackageTabs component instead of existing sections
+- [X] T036 Update packages page in pds_parinama/app/packages/page.tsx to use PackageTabs component instead of existing sections
 - [ ] T037 [P] Update packages page test file in pds_parinama/app/packages/__tests__/page.test.tsx to test PackageTabs rendering and default tab
 
 ---
@@ -119,10 +123,10 @@
 
 **Implementation Tasks:**
 
-- [ ] T038 Create parallel parking page in pds_parinama/app/parallel-parking/page.tsx with content extracted from packages page lines 258-352
+- [X] T038 Create parallel parking page in pds_parinama/app/parallel-parking/page.tsx with content extracted from packages page lines 258-352
 - [ ] T039 [P] Create parallel parking page test file in pds_parinama/app/parallel-parking/__tests__/page.test.tsx with tests for content rendering and CTA
-- [ ] T040 Add metadata and SEO to parallel parking page in pds_parinama/app/parallel-parking/page.tsx
-- [ ] T041 Update packages page in pds_parinama/app/packages/page.tsx to add link to parallel parking page
+- [X] T040 Add metadata and SEO to parallel parking page in pds_parinama/app/parallel-parking/page.tsx
+- [X] T041 Update packages page in pds_parinama/app/packages/page.tsx to add link to parallel parking page
 - [ ] T042 [P] Update packages page test file in pds_parinama/app/packages/__tests__/page.test.tsx to test parallel parking link
 
 ---
@@ -138,7 +142,7 @@
 
 **Implementation Tasks:**
 
-- [ ] T043 Update NAV_LINKS in pds_parinama/lib/constants.ts to: Home, Services, Packages, How It Works, Account
+- [X] T043 Update NAV_LINKS in pds_parinama/lib/constants.ts to: Home, Services, Packages, How It Works, Account
 - [ ] T044 Update Navbar component in pds_parinama/components/Navbar.tsx to add conditional "My Progress" link for logged-in users
 - [ ] T045 [P] Update Navbar test file in pds_parinama/components/__tests__/Navbar.test.tsx to test simplified navigation and My Progress link
 - [ ] T046 Update SERVICES_MENU in pds_parinama/lib/constants.ts if needed for simplified navigation
@@ -156,10 +160,10 @@
 
 **Implementation Tasks:**
 
-- [ ] T047 Update HeroSection component in pds_parinama/components/HeroSection.tsx to add min-h-[44px] to all interactive elements
-- [ ] T048 [P] Update ServiceOverview component in pds_parinama/components/ServiceOverview.tsx to add min-h-[44px] to all interactive elements
-- [ ] T049 Update PackageTabs component in pds_parinama/components/PackageTabs.tsx to add min-h-[44px] to all interactive elements
-- [ ] T050 [P] Update Navbar component in pds_parinama/components/Navbar.tsx to add min-h-[44px] to all interactive elements
+- [X] T047 Update HeroSection component in pds_parinama/components/HeroSection.tsx to add min-h-[44px] to all interactive elements
+- [X] T048 [P] Update ServiceOverview component in pds_parinama/components/ServiceOverview.tsx to add min-h-[44px] to all interactive elements
+- [X] T049 Update PackageTabs component in pds_parinama/components/PackageTabs.tsx to add min-h-[44px] to all interactive elements
+- [X] T050 [P] Update Navbar component in pds_parinama/components/Navbar.tsx to add min-h-[44px] to all interactive elements
 - [ ] T051 Create mobile test file in pds_parinama/components/__tests__/mobile.test.tsx with tests for touch targets and vertical stacking
 - [ ] T052 Update components to use flex-col on mobile for stacked layouts (HeroSection, ServiceOverview, PackageTabs)
 
@@ -177,7 +181,7 @@
 
 **Implementation Tasks:**
 
-- [ ] T053 Add dynamic imports for below-fold components in pds_parinama/app/page.tsx (WhyChoose, GoogleReviews, FAQ, Contact)
+- [X] T053 Add dynamic imports for below-fold components in pds_parinama/app/page.tsx (LicenseRoadmap, TrustBadges, Instructors, FAQ)
 - [ ] T054 [P] Run Lighthouse audit and measure baseline performance metrics
 - [ ] T055 Optimize images in pds_parinama/public/ directory
 - [ ] T056 [P] Reduce animation complexity in pds_parinama/components/ for mobile (simplify Framer Motion animations)
@@ -300,24 +304,24 @@
 **Implementation Tasks:**
 
 ### Premium Hero (FR-019, FR-020 / AC-021)
-- [ ] T073 Update `components/HeroSection.tsx` to render dual CTAs: "Start My Driving Journey" (opens workflow) and "Book a Road Test" (routes to road-test booking)
-- [ ] T074 Update `components/HeroSection.tsx` subheadline to the guided-journey copy referencing Austin & San Antonio
+- [X] T073 Update `components/HeroSection.tsx` to render dual CTAs: "Start My Driving Journey" (opens workflow) and "Book a Road Test" (routes to road-test booking)
+- [X] T074 Update `components/HeroSection.tsx` subheadline to the guided-journey copy referencing Austin & San Antonio
 - [ ] T075 [P] Update `components/__tests__/HeroSection.test.tsx` to test dual CTAs and subheadline
 
 ### License Roadmap (FR-021 / AC-022)
-- [ ] T076 Add `LICENSE_ROADMAP` (5 ordered steps) to `lib/constants.ts`
-- [ ] T077 Create `components/LicenseRoadmap.tsx` visual stepper (mobile-stacked, desktop horizontal)
+- [X] T076 Add `LICENSE_ROADMAP` (5 ordered steps) to `lib/constants.ts`
+- [X] T077 Create `components/LicenseRoadmap.tsx` visual stepper (mobile-stacked, desktop horizontal)
 - [ ] T078 [P] Create `components/__tests__/LicenseRoadmap.test.tsx` testing 5 ordered steps
-- [ ] T079 Add `LicenseRoadmap` to `app/page.tsx`
+- [X] T079 Add `LicenseRoadmap` to `app/page.tsx`
 
 ### Trust / Credentials (FR-022 / AC-023)
-- [ ] T080 Add `TRUST_SIGNALS` (8 items) to `lib/constants.ts`
-- [ ] T081 Create `components/TrustBadges.tsx` and add to `app/page.tsx`
+- [X] T080 Add `TRUST_SIGNALS` (8 items) to `lib/constants.ts`
+- [X] T081 Create `components/TrustBadges.tsx` and add to `app/page.tsx`
 - [ ] T082 [P] Create `components/__tests__/TrustBadges.test.tsx` testing all 8 items
 
 ### Meet Your Instructors (FR-023, FR-032 / AC-024)
-- [ ] T083 Create `lib/instructors.ts` with `Instructor` interface and placeholder profiles (flag for real data)
-- [ ] T084 Create `components/Instructors.tsx` with avatar/initial fallback; add to `app/page.tsx`
+- [X] T083 Create `lib/instructors.ts` with `Instructor` interface and placeholder profiles (flag for real data)
+- [X] T084 Create `components/Instructors.tsx` with avatar/initial fallback; add to `app/page.tsx`
 - [ ] T085 [P] Create `components/__tests__/Instructors.test.tsx`
 
 ### Success Stories (FR-024, FR-032 / AC-025)
@@ -329,11 +333,55 @@
 - [ ] T089 Add the 6 core licensing Q&As to the FAQ source/component and test they render
 
 ### Location Pages (FR-026, FR-027, FR-028, FR-031 / AC-027, AC-028, AC-031)
-- [ ] T090 Add `LOCATION_CONTENT` (areas served, road-test info per city) to `lib/constants.ts`
-- [ ] T091 Create `components/LocationPage.tsx` shared layout emitting LocalBusiness JSON-LD
-- [ ] T092 Create `app/locations/austin/page.tsx` and `app/locations/san-antonio/page.tsx` with unique metadata
+- [X] T090 Add `LOCATION_CONTENT` (areas served, road-test info per city) to `lib/constants.ts`
+- [X] T091 Create `components/LocationPage.tsx` shared layout emitting LocalBusiness JSON-LD
+- [X] T092 Create `app/locations/austin/page.tsx` and `app/locations/san-antonio/page.tsx` with unique metadata
 - [ ] T093 [P] Create `app/locations/__tests__/austin.test.tsx` and `.../san-antonio.test.tsx` (content + JSON-LD)
-- [ ] T094 Update `components/Navbar.tsx` + `lib/constants.ts` to expose Austin & San Antonio (Locations grouping)
+- [X] T094 Update `components/Navbar.tsx` + `lib/constants.ts` to expose Austin & San Antonio (Locations grouping)
 
 ### Mobile Booking Affordances (FR-029 / AC-029)
 - [ ] T095 Ensure hero/location/contact expose click-to-call, WhatsApp/text, and Calendly as ≥44px tappable actions on mobile; cover in mobile test
+
+---
+
+## Phase 1 Visual Polish (2026-06-22)
+
+**Goal:** High-impact visual polish and UX improvements inspired by modern SaaS companies (Stripe, Linear, Calendly, Airbnb) while maintaining orange brand palette and trust signals.
+
+**Independent Test Criteria:**
+- Hero section displays social proof badge with 5-star rating and review count
+- Package cards have premium styling (rounded-3xl, gradients, enhanced hover effects)
+- Trust badges section displays live stats banner (Rating, Reviews, Pass Rate, Students)
+- Premium shadow utilities are available in globals.css
+- StartJourneyButton has micro-interactions (scale effects on hover/tap)
+- Packages page has services overview as hero section
+- Navigation links renamed from "Services & Pricing" to "Services & Plans"
+
+**Implementation Tasks:**
+
+- [X] T096 Update HeroSection component in pds_parinama/components/HeroSection.tsx to add social proof badge with 5-star rating and review count
+- [X] T097 Update HeroSection component in pds_parinama/components/HeroSection.tsx to change headline to "Get Your Texas License In Simple Steps"
+- [X] T098 Update HeroSection component in pds_parinama/components/HeroSection.tsx to increase spacing and improve visual hierarchy
+- [X] T099 Update HeroSection component in pds_parinama/components/HeroSection.tsx to remove quick steps preview per user feedback
+- [X] T100 Update PackageCard component in pds_parinama/components/PackageCard.tsx to upgrade to rounded-3xl corners for premium feel
+- [X] T101 Update PackageCard component in pds_parinama/components/PackageCard.tsx to add gradient backgrounds for featured cards
+- [X] T102 Update PackageCard component in pds_parinama/components/PackageCard.tsx to increase padding and spacing throughout
+- [X] T103 Update PackageCard component in pds_parinama/components/PackageCard.tsx to enhance badges with sparkle icon for featured packages
+- [X] T104 Update PackageCard component in pds_parinama/components/PackageCard.tsx to improve hover effects with shadow-xl
+- [X] T105 Update PackageCard component in pds_parinama/components/PackageCard.tsx to increase price display to text-4xl and improve save badges
+- [X] T106 Update TrustBadges component in pds_parinama/components/TrustBadges.tsx to add live stats banner showing Rating (5.0), Reviews (54+), Pass Rate (98%), Students (500+)
+- [X] T107 Update TrustBadges component in pds_parinama/components/TrustBadges.tsx to enhance trust badge cards with hover effects
+- [X] T108 Update TrustBadges component in pds_parinama/components/TrustBadges.tsx to add gradient background to stats banner
+- [X] T109 Add premium shadow utilities (shadow-card, shadow-lift) to pds_parinama/app/globals.css
+- [X] T110 Add scale effects to StartJourneyButton in pds_parinama/components/ui.tsx (hover: 1.02, tap: 0.98)
+- [X] T111 Improve transitions with better easing in pds_parinama/components/ui.tsx
+- [X] T112 Update packages page in pds_parinama/app/packages/page.tsx to rename eyebrow from "Services & Plans" to "What We Offer"
+- [X] T113 Update packages page in pds_parinama/app/packages/page.tsx to add services overview section with three service cards (Driver Education, Driving Lessons, Road Testing)
+- [X] T114 Update packages page in pds_parinama/app/packages/page.tsx to move services overview to hero section position with hero styling
+- [X] T115 Update packages page in pds_parinama/app/packages/page.tsx to combine pricing header and package tabs into single section
+- [X] T116 Update packages page in pds_parinama/app/packages/page.tsx to left-align services overview section heading
+- [X] T117 Update NAV_LINKS in pds_parinama/lib/constants.ts to rename "Services & Pricing" to "Services & Plans"
+- [X] T118 Remove unused Sparkle icon import from pds_parinama/components/HeroSection.tsx
+- [X] T119 Update spec.md with Implementation Summary documenting Phase 1 changes
+- [X] T120 Update knowledge/pds_parinama/architecture.md with Phase 1 UI/UX Redesign changes
+- [X] T121 Update docs/KNOWLEDGE.md with PDS Parinama UI/UX Redesign section
